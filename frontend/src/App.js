@@ -2,18 +2,17 @@ import React, { useState, useEffect } from 'react';
 import './index.css';
 import logo from './assets/logo.png';
 import { ThumbsUp, Heart, Star, CheckCircle2 } from 'lucide-react';
-import { startSurvey, submitResponses } from './API';
+import { submitResponses } from './API';
 import SatisfactionAnalytics from './components/SatisfactionAnalytics';
 import AdditionalAnalytics from './components/AdditionalAnalytics';
 import FloatingButton from './components/FloatingButton';
 import VercelAnalytics from './components/VercelAnalytics';
 import FeedbackAnalysisPage from './components/FeedbackAnalysisPage';
-import { analyzeFeedback } from './services/nlpService';  // Add this import at the top
+import { analyzeFeedback } from './services/nlpService';
 import { ProgressBar, MilestoneIndicator } from './components/ProgressComponents';
 import QuestionDisplay from './components/QuestionDisplay';
 import { ChatConversation, getEngagementMessage } from './components/MessageBubble';
-
-
+import ContactDetails from './components/ContactDetails';
 
 const QuestionContainer = ({ children, isVisible }) => (
   <div className={`transition-all duration-500 ease-in-out transform 
@@ -27,7 +26,6 @@ const ThankYouScreen = () => {
     <div className="fixed inset-0 bg-tetris-blue bg-opacity-95 flex items-center justify-center z-50 animate-fadeIn">
       <div className="text-center">
         <div className="space-y-6">
-          {/* Icônes animées */}
           <div className="flex justify-center space-x-4 mb-8">
             <ThumbsUp className="w-12 h-12 text-white animate-bounce" />
             <Heart className="w-12 h-12 text-white animate-pulse" />
@@ -35,7 +33,6 @@ const ThankYouScreen = () => {
             <CheckCircle2 className="w-12 h-12 text-white animate-pulse delay-100" />
           </div>
 
-          {/* Message de remerciement animé */}
           <h2 className="text-4xl font-bold text-white mb-4 animate-slideUp">
             Merci pour vos réponses !
           </h2>
@@ -49,33 +46,38 @@ const ThankYouScreen = () => {
 };
 
 function App() {
-  const [surveyId, setSurveyId] = useState(null); // ID du survey en cours
-  const [currentStep, setCurrentStep] = useState(0);
   const [responses, setResponses] = useState({});
+  const [currentStep, setCurrentStep] = useState(0);
   const [showThankYou, setShowThankYou] = useState(false);
   const [showAnalytics, setShowAnalytics] = useState(false);
   const [analyticsView, setAnalyticsView] = useState('main');
   const [showFeedbackAnalysis, setShowFeedbackAnalysis] = useState(false);
   const [isAnimating, setIsAnimating] = useState(false);
-  const [showMessage, setShowMessage] = useState(false);
   const [messageHistory, setMessageHistory] = useState([]);
   const [lastResponse, setLastResponse] = useState(null);
+  const [showContactDetails, setShowContactDetails] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
 
+  // Simplified initialization
+  useEffect(() => {
+    // Simulate a brief loading state
+    const timer = setTimeout(() => {
+      setIsLoading(false);
+    }, 1000);
 
+    return () => clearTimeout(timer);
+  }, []);
 
   useEffect(() => {
     const messageData = getEngagementMessage(
-      currentStep, 
-      questions.length, 
+      currentStep,
+      questions.length,
       responses,
       lastResponse
     );
-    
+
     if (messageData) {
-      // Ajouter le nouveau message à l'historique
       setMessageHistory(prev => [...prev, messageData]);
-      
-      // Faire défiler automatiquement vers le bas
       setTimeout(() => {
         const chatContainer = document.querySelector('.chat-container');
         if (chatContainer) {
@@ -84,79 +86,105 @@ function App() {
       }, 100);
     }
   }, [currentStep, responses, lastResponse]);
-  
 
-  // Initialisation du survey
-  useEffect(() => {
-    const initializeSurvey = async () => {
-      try {
-        const response = await startSurvey(); // Démarre un nouveau survey
-        if (response && response.id) {
-          setSurveyId(response.id);
-        } else {
-          console.error('Impossible de démarrer un nouveau survey.');
-        }
-      } catch (error) {
-        console.error('Erreur lors de l\'initialisation du survey:', error);
-      }
-    };
-
-    initializeSurvey();
-  }, []);
-
-  // Soumission des réponses
   const handleSubmit = async () => {
-    if (!surveyId) {
-      console.error('Survey ID manquant !');
-      return;
-    }
-  
+    setShowContactDetails(true);
+  };
+
+  const handleContactSubmit = async (contactData) => {
     try {
-      console.log('Submitting responses...', responses); // Debug log
-  
-      // First submit all responses
-      const success = await submitResponses(surveyId, responses);
-      
-      if (success) {
-        // If there's a text feedback (question 10), analyze it
-        if (responses[10]) {
-          try {
-            console.log('Analyzing feedback text:', responses[10]); // Debug log
-            const analysis = await analyzeFeedback(responses[10]);
-            
-            console.log('Analysis completed, storing results...', analysis); // Debug log
-  
-            // Store the analysis
-            const analysisResponse = await fetch('http://localhost:5000/api/feedback/analyze', {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json'
-              },
-              body: JSON.stringify({
-                survey_id: surveyId,
-                analysis: analysis
-              })
-            });
-  
-            if (!analysisResponse.ok) {
-              console.error('Failed to store analysis:', await analysisResponse.text());
-            } else {
-              console.log('Analysis stored successfully');
-            }
-          } catch (error) {
-            console.error('Error in feedback analysis:', error);
-            // Continue with thank you screen even if analysis fails
-          }
-        }
-        
-        setShowThankYou(true);
-      } else {
-        console.error('Échec de l\'enregistrement des réponses.');
+      // First, create the user
+      const userResponse = await fetch('http://localhost:5000/api/users', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          name: contactData.name,
+          email: contactData.email,
+          phone: contactData.phone
+        })
+      });
+
+      if (!userResponse.ok) {
+        throw new Error(`Failed to create user: ${userResponse.status}`);
       }
+
+      const userData = await userResponse.json();
+      const userId = userData.id;
+
+      // Then create the survey with user reference
+      const surveyResponse = await fetch('http://localhost:5000/api/start-survey', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          name: `Survey-${Date.now()}`,
+          user_id: userId
+        })
+      });
+
+      if (!surveyResponse.ok) {
+        throw new Error(`Failed to create survey: ${surveyResponse.status}`);
+      }
+
+      const surveyData = await surveyResponse.json();
+      const surveyId = surveyData.id;
+
+      // Submit all responses with survey reference
+      const responsePromises = Object.entries(responses).map(([questionId, answer]) => {
+        return fetch('http://localhost:5000/api/responses', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            survey_id: surveyId,
+            responses: {
+              [questionId]: answer.toString()
+            },
+            user_id: userId
+          })
+        });
+      });
+
+      await Promise.all(responsePromises);
+
+      // If there's a comment (question 10), analyze it
+      if (responses[10]) {
+        try {
+          const analysis = await analyzeFeedback(responses[10]);
+          await fetch('http://localhost:5000/api/feedback/analyze', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+              survey_id: surveyId,
+              analysis: analysis
+            })
+          });
+        } catch (error) {
+          console.error('Error in feedback analysis:', error);
+          // Continue even if feedback analysis fails
+        }
+      }
+
+      setShowContactDetails(false);
+      setShowThankYou(true);
     } catch (error) {
-      console.error('Erreur lors de la soumission des réponses:', error);
+      console.error('Error submitting responses:', error);
+      // Add user feedback here
+      alert(`Une erreur s'est produite: ${error.message}`);
     }
   };
+
+  const handleContactSkip = () => {
+    setShowContactDetails(false);
+    setShowThankYou(true);
+  };
+
   const questions = [
     { id: 1, text: "Recommanderiez-vous notre service à d'autres courtiers ?", type: "rating", max: 10 },
     { id: 2, text: "Quel est votre niveau de satisfaction globale concernant nos services ?", type: "stars", max: 5 },
@@ -173,7 +201,7 @@ function App() {
   const handleResponse = (questionId, value) => {
     setResponses(prev => ({ ...prev, [questionId]: value }));
     setLastResponse({ questionId, answer: value });
-    
+
     if (currentStep < questions.length - 1) {
       setTimeout(() => {
         setCurrentStep(currentStep + 1);
@@ -191,9 +219,9 @@ function App() {
                 key={i}
                 onClick={() => handleResponse(question.id, i)}
                 className={`w-12 h-12 rounded-full border-2 
-                         ${responses[question.id] === i 
-                           ? 'bg-tetris-blue text-white' 
-                           : 'border-tetris-blue text-tetris-blue'} 
+                         ${responses[question.id] === i
+                    ? 'bg-tetris-blue text-white'
+                    : 'border-tetris-blue text-tetris-blue'} 
                          hover:bg-tetris-blue hover:text-white
                          transition duration-150 ease-in-out
                          flex items-center justify-center text-lg font-medium`}
@@ -211,9 +239,9 @@ function App() {
                 key={i}
                 onClick={() => handleResponse(question.id, i + 1)}
                 className={`text-4xl transition duration-150 ease-in-out
-                         ${responses[question.id] > i 
-                           ? 'text-yellow-400' 
-                           : 'text-gray-300'}`}
+                         ${responses[question.id] > i
+                    ? 'text-yellow-400'
+                    : 'text-gray-300'}`}
               >
                 ★
               </button>
@@ -229,8 +257,8 @@ function App() {
                 onClick={() => handleResponse(question.id, option)}
                 className={`w-full px-4 py-3 text-left rounded-lg
                          ${responses[question.id] === option
-                           ? 'bg-tetris-blue text-white'
-                           : 'border border-gray-300 text-gray-700 hover:border-tetris-blue hover:bg-blue-50'}
+                    ? 'bg-tetris-blue text-white'
+                    : 'border border-gray-300 text-gray-700 hover:border-tetris-blue hover:bg-blue-50'}
                          transition duration-150 ease-in-out`}
               >
                 {option}
@@ -254,89 +282,112 @@ function App() {
     }
   };
 
+  if (showContactDetails) {
+    return (
+      <div className="min-h-screen bg-tetris-blue py-8">
+        <ContactDetails
+          responses={responses}
+          onSubmit={handleContactSubmit}
+          onSkip={handleContactSkip}
+        />
+      </div>
+    );
+  }
+
   if (showThankYou) {
     return <ThankYouScreen />;
   }
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-tetris-blue flex items-center justify-center">
+        <div className="bg-white p-8 rounded-xl shadow-xl">
+          <p className="text-xl text-gray-700">Initialisation du questionnaire...</p>
+        </div>
+      </div>
+    );
+  }
+
   if (showAnalytics) {
     if (showFeedbackAnalysis) {
-        return (
-            <FeedbackAnalysisPage 
-                onBack={() => setShowFeedbackAnalysis(false)} 
-            />
-        );
+      return (
+        <FeedbackAnalysisPage
+          onBack={() => setShowFeedbackAnalysis(false)}
+        />
+      );
     }
     if (analyticsView === 'additional') {
-        return (
-            <AdditionalAnalytics 
-                onBack={(view) => {
-                    if (view === 'feedback') {
-                        setAnalyticsView('feedback');
-                    } else {
-                        setAnalyticsView('main');
-                    }
-                }}
-                onShowFeedback={() => setShowFeedbackAnalysis(true)}
-            />
-        );
+      return (
+        <AdditionalAnalytics
+          onBack={(view) => {
+            if (view === 'feedback') {
+              setAnalyticsView('feedback');
+            } else {
+              setAnalyticsView('main');
+            }
+          }}
+          onShowFeedback={() => setShowFeedbackAnalysis(true)}
+        />
+      );
     }
     return (
-        <SatisfactionAnalytics 
-            onBack={() => {
-                setShowAnalytics(false);
-                setAnalyticsView('main');
-            }}
-            onShowAdditional={() => setAnalyticsView('additional')}
-            onShowFeedback={() => setShowFeedbackAnalysis(true)}
-        />
+      <SatisfactionAnalytics
+        onBack={() => {
+          setShowAnalytics(false);
+          setAnalyticsView('main');
+        }}
+        onShowAdditional={() => setAnalyticsView('additional')}
+        onShowFeedback={() => setShowFeedbackAnalysis(true)}
+      />
     );
-};
+  }
 
-const handleNextStep = () => {
-  setIsAnimating(true);
-  setTimeout(() => {
-    setCurrentStep(currentStep + 1);
-    setIsAnimating(false);
-  }, 300);
-};
+  const handleNextStep = () => {
+    setIsAnimating(true);
+    setTimeout(() => {
+      setCurrentStep(currentStep + 1);
+      setIsAnimating(false);
+    }, 300);
+  };
 
-const handlePrevStep = () => {
-  setIsAnimating(true);
-  setTimeout(() => {
-    setCurrentStep(Math.max(0, currentStep - 1));
-    setIsAnimating(false);
-  }, 300);
-};
+  const handlePrevStep = () => {
+    setIsAnimating(true);
+    setTimeout(() => {
+      setCurrentStep(Math.max(0, currentStep - 1));
+      setIsAnimating(false);
+    }, 300);
+  };
 
-return (
-  <>
-    <VercelAnalytics />
-    <div className="min-h-screen bg-tetris-blue">
-      {messageHistory.length > 0 && (
-        <ChatConversation messages={messageHistory} />
-      )}
-      <header className="sticky top-0 z-50 bg-white shadow-lg">
-        <div className="max-w-7xl mx-auto py-3 px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center">
-            <img src={logo} alt="Tetris Assurance" className="h-12 w-auto" />
-            <div className="text-tetris-blue font-medium text-lg">
-              Question {currentStep + 1} sur {questions.length}
+  return (
+    <>
+      <VercelAnalytics />
+      <div className="min-h-screen bg-tetris-blue">
+        {messageHistory.length > 0 && (
+          <ChatConversation messages={messageHistory} />
+        )}
+        <header className="sticky top-0 z-50 bg-white shadow-lg">
+          <div className="max-w-7xl mx-auto py-3 px-4 sm:px-6 lg:px-8">
+            <div className="flex justify-between items-center">
+              <img src={logo} alt="Tetris Assurance" className="h-12 w-auto" />
+              <div className="text-tetris-blue font-medium text-lg">
+                Question {currentStep + 1} sur {questions.length}
+              </div>
+            </div>
+
+            <div className="mt-2">
+              <ProgressBar
+                currentStep={currentStep}
+                totalSteps={questions.length}
+              />
+              <MilestoneIndicator
+                currentStep={currentStep}
+                totalSteps={questions.length}
+              />
             </div>
           </div>
-          
-          <div className="mt-2">
-            <ProgressBar 
-              currentStep={currentStep} 
-              totalSteps={questions.length} 
-            />
-            <MilestoneIndicator 
-              currentStep={currentStep} 
-              totalSteps={questions.length} 
-            />
-          </div>
-        </div>
-      </header>
+        </header>
 
-      <main className="max-w-4xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
+        <main className="max-w-4xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
 
           <div className="bg-white rounded-xl shadow-xl overflow-hidden">
             <QuestionContainer isVisible={!isAnimating}>

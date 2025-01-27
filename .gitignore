@@ -36,3 +36,4 @@ yarn-error.log*
 *.map
 remapping.mjs
 remapping.umd.js
+node_modules
