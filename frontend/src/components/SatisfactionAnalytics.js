@@ -5,7 +5,7 @@ import {
     Cell,
 } from 'recharts';
 import { 
-    ArrowLeft, ThumbsUp, Star, Zap, Target,ArrowRight
+    ArrowLeft, ThumbsUp, Star, Zap, Target,ArrowRight,MessageSquare
 } from 'lucide-react';
 
 const COLORS = ['#0B3D91', '#1E90FF', '#4169E1', '#6495ED', '#87CEEB'];
@@ -44,7 +44,7 @@ const StatCard = ({ icon: Icon, title, value, description }) => (
     </div>
 );
 
-const SatisfactionAnalytics = ({ onBack, onShowAdditional }) => {
+const SatisfactionAnalytics = ({ onBack, onShowAdditional, onShowComments }) => {
     const [data, setData] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
@@ -330,6 +330,15 @@ const SatisfactionAnalytics = ({ onBack, onShowAdditional }) => {
                             </PieChart>
                         </ResponsiveContainer>
                     </div>
+                    <div className="fixed bottom-8 left-1/2 transform -translate-x-1/2">
+                    <button
+                        onClick={onShowComments}
+                        className="bg-white border-2 border-tetris-blue text-tetris-blue px-6 py-3 rounded-lg hover:bg-tetris-blue hover:text-white transition-colors flex items-center gap-2 text-lg font-medium shadow-md hover:shadow-lg"
+                    >
+                        <MessageSquare size={24} />
+                        Voir tous les commentaires 
+                    </button>
+                </div>
                 </div>
             </div>
         </div>

@@ -9,18 +9,22 @@ import FloatingButton from './components/FloatingButton';
 import VercelAnalytics from './components/VercelAnalytics';
 import FeedbackAnalysisPage from './components/FeedbackAnalysisPage';
 import { analyzeFeedback } from './services/nlpService';
+import { analyzeFeedback } from './services/nlpService';
 import { ProgressBar, MilestoneIndicator } from './components/ProgressComponents';
 import QuestionDisplay from './components/QuestionDisplay';
 import { ChatConversation, getEngagementMessage } from './components/MessageBubble';
 import ContactDetails from './components/ContactDetails';
 
 const QuestionContainer = ({ children, isVisible }) => (
-  <div className={`transition-all duration-500 ease-in-out transform 
-    ${isVisible ? 'opacity-100 translate-x-0' : 'opacity-0 -translate-x-full'}`}>
+  <div
+    className={`transition-all duration-500 ease-in-out transform 
+    ${isVisible ? 'opacity-100 translate-x-0' : 'opacity-0 -translate-x-full'}`}
+  >
     {children}
   </div>
 );
 
+// Écran de remerciement
 const ThankYouScreen = () => {
   return (
     <div className="fixed inset-0 bg-tetris-blue bg-opacity-95 flex items-center justify-center z-50 animate-fadeIn">
@@ -231,6 +235,7 @@ function App() {
             ))}
           </div>
         );
+
       case 'stars':
         return (
           <div className="flex justify-center gap-2">
@@ -248,6 +253,7 @@ function App() {
             ))}
           </div>
         );
+
       case 'choice':
         return (
           <div className="grid grid-cols-1 gap-3">
@@ -266,10 +272,11 @@ function App() {
             ))}
           </div>
         );
+
       case 'text':
         return (
           <textarea
-            value={responses[question.id] || ''}
+            value={responses[question.id]?.answer || ''}
             onChange={(e) => handleResponse(question.id, e.target.value)}
             className="w-full h-32 p-3 border border-gray-300 rounded-lg
                      focus:ring-2 focus:ring-tetris-blue focus:border-transparent
@@ -277,6 +284,7 @@ function App() {
             placeholder="Écrivez votre réponse ici..."
           />
         );
+
       default:
         return null;
     }
@@ -313,6 +321,22 @@ function App() {
       return (
         <FeedbackAnalysisPage
           onBack={() => setShowFeedbackAnalysis(false)}
+        />
+      );
+      return (
+        <FeedbackAnalysisPage
+          onBack={() => setShowFeedbackAnalysis(false)}
+        />
+      );
+    }
+    if (showComments) {
+      return (
+        <CommentsAnalysis
+          onBack={() => setShowComments(false)}
+          onShowAdditional={() => {
+            setShowComments(false);
+            setAnalyticsView('additional');
+          }}
         />
       );
     }
@@ -357,6 +381,13 @@ function App() {
       setIsAnimating(false);
     }, 300);
   };
+  const handlePrevStep = () => {
+    setIsAnimating(true);
+    setTimeout(() => {
+      setCurrentStep(Math.max(0, currentStep - 1));
+      setIsAnimating(false);
+    }, 300);
+  };
 
   return (
     <>
@@ -392,31 +423,55 @@ function App() {
           <div className="bg-white rounded-xl shadow-xl overflow-hidden">
             <QuestionContainer isVisible={!isAnimating}>
               <div className="p-8">
+                {/* Affichage du texte de la question */}
                 <QuestionDisplay question={questions[currentStep]} />
+
+                {/* Bloc de réponses principal (rating, étoiles, choix, texte...) */}
                 <div className="space-y-6">
                   {renderQuestionInput(questions[currentStep])}
                 </div>
+
+                {/* Affiche le commentaire optionnel si ce n’est PAS un type 'text' */}
+                {questions[currentStep].type !== 'text' && (
+                  <div className="mt-6">
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Commentaire (optionnel)
+                    </label>
+                    <textarea
+                      value={responses[questions[currentStep].id]?.optionalAnswer || ''}
+                      onChange={(e) => handleOptionalAnswer(questions[currentStep].id, e.target.value)}
+                      className="w-full h-20 p-3 border border-gray-300 rounded-lg
+                                focus:ring-2 focus:ring-tetris-blue focus:border-transparent
+                                resize-none"
+                      placeholder="Des idées supplémentaires ? Écrivez-nous-en quelques mots..."
+                    />
+                  </div>
+                )}
               </div>
             </QuestionContainer>
 
+            {/* Boutons "Précédent" / "Suivant"/"Terminer" */}
             <div className="px-8 py-4 bg-gray-50 border-t border-gray-200 flex justify-between">
               <button
                 onClick={handlePrevStep}
                 disabled={currentStep === 0}
-                className={`px-6 py-3 rounded-lg text-lg transition-all duration-300
+                className={`
+                  px-6 py-3 rounded-lg text-lg transition-all duration-300
                   ${currentStep === 0
                     ? 'bg-gray-300 cursor-not-allowed opacity-50'
                     : 'bg-white border border-gray-300 hover:bg-gray-50 hover:shadow-md'
-                  }`}
+                  }
+                `}
               >
                 Précédent
               </button>
+
               {currentStep === questions.length - 1 ? (
                 <button
                   onClick={handleSubmit}
                   className="px-6 py-3 bg-tetris-blue text-white rounded-lg
-                           hover:bg-blue-700 transition-all duration-300 hover:shadow-lg
-                           transform hover:-translate-y-1"
+                             hover:bg-blue-700 transition-all duration-300 hover:shadow-lg
+                             transform hover:-translate-y-1"
                 >
                   Terminer
                 </button>
@@ -424,8 +479,8 @@ function App() {
                 <button
                   onClick={handleNextStep}
                   className="px-6 py-3 bg-tetris-blue text-white rounded-lg
-                           hover:bg-blue-700 transition-all duration-300 hover:shadow-lg
-                           transform hover:-translate-y-1"
+                             hover:bg-blue-700 transition-all duration-300 hover:shadow-lg
+                             transform hover:-translate-y-1"
                 >
                   Suivant
                 </button>
@@ -433,6 +488,8 @@ function App() {
             </div>
           </div>
         </main>
+
+        {/* Bouton flottant pour accéder aux analytics */}
         <FloatingButton onClick={() => setShowAnalytics(true)} />
       </div>
     </>

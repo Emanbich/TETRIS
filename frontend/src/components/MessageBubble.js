@@ -77,7 +77,7 @@ const getResponseBasedMessage = (questionId, answer) => {
     4: { message: "Mince... On n'est pas tout à fait dans le mille 🎯", icon: AlertCircle },
     5: { message: "Ok, on va essayer d'être plus clairs à l'avenir 🔍", icon: AlertCircle },
     6: { message: "Ah... On pensait avoir fait plus simple que ça 🤔", icon: AlertCircle },
-    7: { message: "Le timing n'est pas notre fort ces temps-ci 😅", icon: Clock },
+    7: { message: "Le timing n'est pas notre point fort ces temps-ci 😅", icon: Clock },
     8: { message: "On dirait que notre support a besoin d'un boost ⚡", icon: AlertCircle },
     9: { message: "Les prix, c'est toujours compliqué... 💸", icon: AlertCircle }
   };

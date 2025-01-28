@@ -159,7 +159,7 @@ app.post('/api/start-survey', async (req, res) => {
     }
 });
 
-// Route to store responses
+// ...
 app.post('/api/responses', async (req, res) => {
     try {
         const { survey_id, responses, user_id } = req.body;
@@ -168,6 +168,15 @@ app.post('/api/responses', async (req, res) => {
             return res.status(400).json({ error: 'Invalid data. Make sure to include survey_id and responses.' });
         }
 
+        // Prépare la requête SQL
+        const query = `
+          INSERT INTO responses 
+            (survey_id, question_id, answer, optional_answer, responded_at) 
+          VALUES (?, ?, ?, ?, ?)
+        `;
+
+        // Pour chaque item dans le tableau responses
+        // item = { question_id, answer, optional_answer }
         const currentDateTime = new Date();
         const values = Object.entries(responses).map(([questionId, answer]) => [
             Number(survey_id),
@@ -189,6 +198,8 @@ app.post('/api/responses', async (req, res) => {
         res.status(500).json({ error: 'Server error' });
     }
 });
+
+
 
 // Error handling middleware
 app.use((err, req, res, next) => {
