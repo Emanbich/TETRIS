@@ -381,13 +381,6 @@ function App() {
       setIsAnimating(false);
     }, 300);
   };
-  const handlePrevStep = () => {
-    setIsAnimating(true);
-    setTimeout(() => {
-      setCurrentStep(Math.max(0, currentStep - 1));
-      setIsAnimating(false);
-    }, 300);
-  };
 
   return (
     <>

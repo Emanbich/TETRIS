@@ -169,11 +169,7 @@ app.post('/api/responses', async (req, res) => {
         }
 
         // Prépare la requête SQL
-        const query = `
-          INSERT INTO responses 
-            (survey_id, question_id, answer, optional_answer, responded_at) 
-          VALUES (?, ?, ?, ?, ?)
-        `;
+        const query = 'INSERT INTO responses (survey_id, question_id, answer, user_id, responded_at) VALUES (?, ?, ?, ?, ?)';
 
         // Pour chaque item dans le tableau responses
         // item = { question_id, answer, optional_answer }
@@ -185,8 +181,6 @@ app.post('/api/responses', async (req, res) => {
             user_id,
             currentDateTime
         ]);
-
-        const query = 'INSERT INTO responses (survey_id, question_id, answer, user_id, responded_at) VALUES (?, ?, ?, ?, ?)';
 
         for (const value of values) {
             await executeQuery(query, value);
