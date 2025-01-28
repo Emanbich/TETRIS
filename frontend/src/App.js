@@ -9,11 +9,11 @@ import FloatingButton from './components/FloatingButton';
 import VercelAnalytics from './components/VercelAnalytics';
 import FeedbackAnalysisPage from './components/FeedbackAnalysisPage';
 import { analyzeFeedback } from './services/nlpService';
-import { analyzeFeedback } from './services/nlpService';
 import { ProgressBar, MilestoneIndicator } from './components/ProgressComponents';
 import QuestionDisplay from './components/QuestionDisplay';
 import { ChatConversation, getEngagementMessage } from './components/MessageBubble';
 import ContactDetails from './components/ContactDetails';
+import CommentsAnalysis from './components/CommentsAnalysis';
 
 const QuestionContainer = ({ children, isVisible }) => (
   <div
@@ -61,6 +61,7 @@ function App() {
   const [lastResponse, setLastResponse] = useState(null);
   const [showContactDetails, setShowContactDetails] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [showComments, setShowComments] = useState(false);
 
   // Simplified initialization
   useEffect(() => {
@@ -94,7 +95,16 @@ function App() {
   const handleSubmit = async () => {
     setShowContactDetails(true);
   };
-
+  const handleOptionalAnswer = (questionId, value) => {
+    setResponses(prev => ({
+      ...prev,
+      [questionId]: {
+        // On conserve l'existant pour la réponse principale
+        answer: prev[questionId]?.answer || '',
+        optionalAnswer: value
+      }
+    }));
+  };
   const handleContactSubmit = async (contactData) => {
     try {
       // First, create the user
@@ -136,6 +146,16 @@ function App() {
       const surveyData = await surveyResponse.json();
       const surveyId = surveyData.id;
 
+      const handleOptionalAnswer = (questionId, value) => {
+        setResponses(prev => ({
+          ...prev,
+          [questionId]: {
+            // On conserve l'existant pour la réponse principale
+            answer: prev[questionId]?.answer || '',
+            optionalAnswer: value
+          }
+        }));
+      };
       // Submit all responses with survey reference
       const responsePromises = Object.entries(responses).map(([questionId, answer]) => {
         return fetch('http://localhost:5000/api/responses', {
@@ -304,16 +324,6 @@ function App() {
 
   if (showThankYou) {
     return <ThankYouScreen />;
-  }
-
-  if (isLoading) {
-    return (
-      <div className="min-h-screen bg-tetris-blue flex items-center justify-center">
-        <div className="bg-white p-8 rounded-xl shadow-xl">
-          <p className="text-xl text-gray-700">Initialisation du questionnaire...</p>
-        </div>
-      </div>
-    );
   }
 
   if (showAnalytics) {

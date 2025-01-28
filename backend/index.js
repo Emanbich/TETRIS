@@ -25,7 +25,7 @@ app.use((req, res, next) => {
 const pool = mariadb.createPool({
     host: 'localhost',
     user: 'root',
-    password: '1972',
+    password: '123',
     database: 'satisfaction_db',
     connectionLimit: 5,
     bigIntAsNumber: true,
@@ -144,10 +144,10 @@ app.post('/api/users', async (req, res) => {
 // Route to start the survey
 app.post('/api/start-survey', async (req, res) => {
     try {
-        const { name, user_id } = req.body;
+        const { name, id } = req.body;
         const result = await executeQuery(
-            'INSERT INTO surveys (name, user_id) VALUES (?, ?)',
-            [name || 'Nouveau survey', user_id]
+            'INSERT INTO surveys (name, id) VALUES (?, ?)',
+            [name || 'Nouveau survey', id]
         );
 
         res.status(201).json({
