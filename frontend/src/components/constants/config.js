@@ -18,7 +18,8 @@ export const SURVEY_CONFIG = {
       9: "Pas du tout compétitive"
     },
     CHAT_SCROLL_DELAY: 100,
-    CONTACT_THRESHOLD: 4 // Show contact form if rating is below this
+    CONTACT_THRESHOLD: 4, // Show contact form if rating is below this
+    NEGATIVE_SCORE_THRESHOLD: 0.5
   };
   
   export const STYLING = {

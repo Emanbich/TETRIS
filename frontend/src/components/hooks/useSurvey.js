@@ -18,6 +18,74 @@ export const useSurvey = () => {
   const [contactDetailsSubmitted, setContactDetailsSubmitted] = useState(false);
   const { questions, loading: questionsLoading } = useQuestions();
 
+  const getNegativeWeight = (question, response) => {
+    if (question.type === 'rating' || question.type === 'stars') {
+      const numericResponse = parseInt(response, 10);
+      const threshold = Math.floor(question.max / 2);
+  
+      if (numericResponse > threshold) {
+        console.log(
+          `[Question ${question.id} - ${question.type}] Réponse: ${numericResponse} > seuil (${threshold}) → Poids négatif: 0`
+        );
+        return 0;
+      } else {
+        // Pour donner un poids négatif à la valeur du seuil
+        const weight = 1 - (numericResponse / (threshold + 1));
+        
+        console.log(
+          `[Question ${question.id} - ${question.type}] Réponse: ${numericResponse}, Seuil: ${threshold}, Poids négatif: ${weight}`
+        );
+        return weight;
+      }
+    } else if (question.type === 'choice') {
+      if (!question.options) return 0;
+      let optionsArray = question.options;
+      if (!Array.isArray(optionsArray)) {
+        if (typeof optionsArray === 'string') {
+          try {
+            optionsArray = JSON.parse(optionsArray);
+          } catch (error) {
+            optionsArray = optionsArray.split(',');
+          }
+        } else {
+          console.error(`Les options pour la question ${question.id} ne sont ni un tableau ni une chaîne.`);
+          return 0;
+        }
+      }
+      let chosenIndex;
+      const responseAsNumber = parseInt(response, 10);
+      if (!isNaN(responseAsNumber)) {
+        chosenIndex = responseAsNumber;
+      } else {
+        chosenIndex = optionsArray.indexOf(response);
+      }
+      if (chosenIndex < 0) {
+        console.log(`[Question ${question.id} - choice] Réponse non trouvée dans les options.`);
+        return 0;
+      }
+      const threshold = Math.floor((optionsArray.length-1) / 2);
+      if (chosenIndex <= threshold) {
+        console.log(
+          `[Question ${question.id} - choice] Réponse: ${response} (Index: ${chosenIndex}) est dans la partie positive → Poids négatif: 0`
+        );
+        return 0;
+      } else {
+        const denominator = optionsArray.length - threshold - 1;
+        let weight;
+        if (denominator <= 0) {
+          weight = 1;
+        } else {
+          weight = (chosenIndex - threshold) / denominator;
+        }
+        console.log(
+          `[Question ${question.id} - choice] Réponse: ${response} (Index: ${chosenIndex}), Seuil: ${threshold}, Poids négatif: ${weight}`
+        );
+        return weight;
+      }
+    }
+    return 0;
+  };
+  
   // Initialisation du questionnaire
   useEffect(() => {
     const initializeSurvey = async () => {
@@ -35,6 +103,7 @@ export const useSurvey = () => {
     initializeSurvey();
   }, []);
 
+  // Mise à jour de la réponse et calcul du score négatif pondéré
   const handleResponse = (questionId, value) => {
     setResponses(prev => ({
       ...prev,
@@ -45,44 +114,49 @@ export const useSurvey = () => {
     }));
     setLastResponse({ questionId, answer: value });
 
-    // Vérification des conditions pour afficher le formulaire de contact
     const shouldShowContact = () => {
-      if (questionId === 1) {
-        return parseInt(value) < 4;
-      }
-
-      const mostNegativeResponses = SURVEY_CONFIG.NEGATIVE_RESPONSES;
       const updatedResponses = {
         ...responses,
         [questionId]: { answer: value }
       };
 
-      const firstResponse = updatedResponses[1]?.answer;
-      if (firstResponse === undefined || parseInt(firstResponse) >= 4) {
+      console.log('--- Calcul du score négatif ---');
+      console.log('Réponses mises à jour:', updatedResponses);
+
+      let totalImportance = 0;
+      let negativeImportance = 0;
+
+      Object.keys(updatedResponses).forEach(key => {
+        const qId = parseInt(key, 10);
+        const questionObj = questions.find(q => q.id === qId);
+        if (questionObj) {
+          // On s'assure que l'importance est un nombre (par exemple, 10)
+          const importance = parseFloat(questionObj.importance) || 0;
+          totalImportance += importance;
+          const negativeWeight = getNegativeWeight(questionObj, updatedResponses[qId].answer);
+          negativeImportance += importance * negativeWeight;
+          console.log(
+            `Question ${qId}: importance=${importance}, réponse=${updatedResponses[qId].answer}, Poids négatif=${negativeWeight}`
+          );
+        }
+      });
+
+      console.log(`Total importance: ${totalImportance}`);
+      console.log(`Importance négative pondérée: ${negativeImportance}`);
+
+      if (totalImportance === 0) {
+        console.log('Aucune importance totale calculée, ne pas afficher le formulaire.');
         return false;
       }
-
-      let answeredQuestions = 0;
-      let negativeResponses = 0;
-
-      for (let qId = 2; qId <= questionId; qId++) {
-        const response = updatedResponses[qId]?.answer;
-        if (response !== undefined) {
-          answeredQuestions++;
-          if (qId === 2) {
-            if (parseInt(response) <= mostNegativeResponses[2]) {
-              negativeResponses++;
-            }
-          } else if (response === mostNegativeResponses[qId]) {
-            negativeResponses++;
-          }
-        }
-      }
-
-      return answeredQuestions > 0 && negativeResponses === answeredQuestions;
+      const negativeScore = negativeImportance / totalImportance;
+      const threshold = SURVEY_CONFIG.NEGATIVE_SCORE_THRESHOLD || 0.5;
+      console.log(`Score négatif: ${negativeScore} (Seuil: ${threshold})`);
+      return negativeScore >= threshold;
     };
 
-    setShowContactButton(shouldShowContact());
+    const contactVisibility = shouldShowContact();
+    console.log(`Le formulaire de contact doit être affiché: ${contactVisibility}`);
+    setShowContactButton(contactVisibility);
   };
 
   const handleOptionalAnswer = (questionId, value) => {
@@ -101,16 +175,15 @@ export const useSurvey = () => {
       return;
     }
 
-    // Si on est sur la dernière question et que le formulaire de contact
-    // est requis (réponses négatives) mais que l'utilisateur n'a ni soumis ni ignoré ce formulaire,
-    // on n'exécute pas encore la soumission finale
+    // Si nous sommes sur la dernière question et que le formulaire de contact est requis
+    // mais non encore soumis ou ignoré, nous ne soumettons pas les réponses.
     if (currentStep === questions.length - 1 && showContactButton && !contactFormSkipped && !contactDetailsSubmitted) {
+      console.log('Formulaire de contact requis, soumission différée.');
       return;
     }
 
     try {
       const success = await submitResponses(surveyId, responses);
-      
       if (success) {
         if (responses[10]?.answer) {
           try {
@@ -125,7 +198,6 @@ export const useSurvey = () => {
                 analysis: analysis
               })
             });
-
             if (!analysisResponse.ok) {
               console.error('Failed to store analysis:', await analysisResponse.text());
             }
@@ -133,7 +205,6 @@ export const useSurvey = () => {
             console.error('Error in feedback analysis:', error);
           }
         }
-        
         setShowThankYou(true);
       } else {
         console.error('Failed to save responses.');
@@ -171,13 +242,10 @@ export const useSurvey = () => {
           ...contactData
         })
       });
-
       if (!response.ok) {
         throw new Error('Failed to submit contact details');
       }
-
       const success = await submitResponses(surveyId, responses);
-      
       if (success) {
         setContactDetailsSubmitted(true);
         setShowThankYou(true);

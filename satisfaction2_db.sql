@@ -162,3 +162,9 @@ WHERE id = 9;
 
 ALTER TABLE questions 
 ADD COLUMN importance FLOAT DEFAULT NULL;
+
+
+ALTER TABLE questions
+  DROP COLUMN KPI_type,
+  DROP COLUMN kpi_poids,
+  DROP COLUMN class_poids;

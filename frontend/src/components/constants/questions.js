@@ -17,7 +17,8 @@ const transformDatabaseQuestion = (dbQuestion) => ({
   text: dbQuestion.question_text,
   type: dbQuestion.question_type,
   max: dbQuestion.max_value,
-  options: dbQuestion.options // Now coming directly from the database
+  options: dbQuestion.options, 
+  importance: dbQuestion.importance 
 });
 
 // Function to fetch and format questions

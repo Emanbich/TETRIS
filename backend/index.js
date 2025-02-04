@@ -13,14 +13,15 @@ app.use(bodyParser.json());
 // Database configuration
 const pool = mariadb.createPool({
     host: 'localhost',
-    port:3306,
+    port: 3307,
     user: 'root',
     password: '123',
     database: 'satisfaction_db',
     connectionLimit: 5,
     bigIntAsNumber: true  // Convert BigInt to Number
-
 });
+
+// Création de la table low_satisfaction_responses (inchangé)
 const createLowSatisfactionTable = async () => {
     const query = `
       CREATE TABLE IF NOT EXISTS low_satisfaction_responses (
@@ -40,9 +41,9 @@ const createLowSatisfactionTable = async () => {
     } catch (err) {
       console.error('Error creating low satisfaction table:', err);
     }
-  };
+};
 
-  createLowSatisfactionTable();
+createLowSatisfactionTable();
 
 async function executeQuery(query, params = []) {
     let conn;
@@ -117,8 +118,6 @@ app.post('/api/responses', async (req, res) => {
     }
 });
 
-
-
 // Error handling middleware
 app.use((err, req, res, next) => {
     console.error(err.stack);
@@ -174,6 +173,7 @@ app.get('/api/analytics/responses', async (req, res) => {
       res.status(500).send('Server error');
   }
 });
+
 app.get('/api/analytics/additional', async (req, res) => {
   try {
       const result = await executeQuery(`
@@ -355,6 +355,7 @@ app.get('/api/comments', async (req, res) => {
         res.status(500).send('Server error');
     }
 });
+
 // Endpoint to store low satisfaction contact details
 app.post('/api/low-satisfaction', async (req, res) => {
     try {
@@ -383,9 +384,9 @@ app.post('/api/low-satisfaction', async (req, res) => {
         error: 'Failed to store low satisfaction response' 
       });
     }
-  });
+});
   
-  // Endpoint to get all low satisfaction responses
+// Endpoint to get all low satisfaction responses
 app.get('/api/low-satisfaction', async (req, res) => {
     try {
       const query = `
@@ -422,9 +423,10 @@ app.get('/api/low-satisfaction', async (req, res) => {
         details: err.message 
       });
     }
-  });
+});
 
-// Get all questions
+// Get all questions (adapté pour ne plus utiliser KPI_type, kpi_poids et class_poids)
+// L'importance est ici gérée en pourcentage (valeur entre 0 et 100, affichée avec 2 décimales)
 app.get('/api/questions', async (req, res) => {
     try {
         const questions = await executeQuery(`
@@ -434,17 +436,12 @@ app.get('/api/questions', async (req, res) => {
                 question_type, 
                 max_value, 
                 class,
-                KPI_type,
-                kpi_poids,  
-                class_poids,
-                (kpi_poids * class_poids) AS raw_importance,
+                importance,
                 options
             FROM questions
             ORDER BY id ASC
         `);
-
-        // Calcul de la somme totale des importances
-        const totalImportance = questions.reduce((sum, q) => sum + (q.raw_importance || 0), 0);
+        
 
         // Format the response
         const formattedQuestions = questions.map(q => {
@@ -466,12 +463,10 @@ app.get('/api/questions', async (req, res) => {
                 question_type: q.question_type,
                 max_value: q.max_value,
                 class: q.class,
-                KPI_type: q.KPI_type,
-                kpi_poids: q.kpi_poids,  
-                class_poids: q.class_poids,
-                importance: totalImportance > 0 && q.raw_importance !== null && q.raw_importance !== undefined 
-                ? Number(q.raw_importance / totalImportance).toFixed(4) 
-                : "0.0000",
+                // On renvoie directement la valeur d'importance en pourcentage (2 décimales)
+                importance: q.importance !== null && q.importance !== undefined 
+                            ? Number(q.importance).toFixed(2) 
+                            : "0.00",
                 options: parsedOptions || []
             };
         });
@@ -483,8 +478,8 @@ app.get('/api/questions', async (req, res) => {
     }
 });
 
-
-// Update or create questions
+// Update or create questions (adapté pour ne plus utiliser KPI_type, kpi_poids et class_poids)
+// La valeur d'importance est attendue en pourcentage (0 à 100)
 app.post('/api/questions/update', async (req, res) => {
     let conn;
     try {
@@ -493,6 +488,15 @@ app.post('/api/questions/update', async (req, res) => {
 
         const { questions } = req.body;
 
+        // Fonction de validation pour l'importance (doit être entre 0 et 100)
+        const validateImportance = (imp) => {
+            let value = parseFloat(imp);
+            if (isNaN(value) || value < 0 || value > 100) {
+                return 0;
+            }
+            return value;
+        };
+
         for (const question of questions) {
             const checkResult = await conn.query(
                 'SELECT id FROM questions WHERE id = ?',
@@ -500,11 +504,10 @@ app.post('/api/questions/update', async (req, res) => {
             );
 
             const options = question.options ? JSON.stringify(question.options) : null;
+            // Valider et convertir l'importance en pourcentage
+            const importancePercent = validateImportance(question.importance);
 
             if (checkResult.length > 0) {
-                const validatePoids = (poids) => {
-                    return poids !== undefined && poids !== null && poids >= 0 && poids <= 1;
-                };
                 // Update existing question
                 await conn.query(`
                     UPDATE questions
@@ -513,10 +516,7 @@ app.post('/api/questions/update', async (req, res) => {
                         question_type = ?,
                         max_value = ?,
                         class = ?,
-                        KPI_type = ?,
-                        kpi_poids = ?,
-                        class_poids = ?,
-                        importance = (kpi_poids * class_poids) / (SELECT SUM(kpi_poids * class_poids) FROM questions),
+                        importance = ?,
                         options = ?
                     WHERE id = ?
                 `, [
@@ -524,9 +524,7 @@ app.post('/api/questions/update', async (req, res) => {
                     question.question_type,
                     question.max_value,
                     question.class,
-                    question.KPI_type || null,
-                    validatePoids(question.kpi_poids) ? question.kpi_poids : 0, 
-                    validatePoids(question.class_poids) ? question.class_poids : 0, 
+                    importancePercent,
                     options,
                     question.id
                 ]);
@@ -534,17 +532,15 @@ app.post('/api/questions/update', async (req, res) => {
                 // Insert new question
                 await conn.query(`
                     INSERT INTO questions 
-                    (id, question_text, question_type, max_value, class,KPI_type,kpi_poids,class_poids, options)
-                    VALUES (?, ?, ?, ?, ?, ? , ?, ?,?)
+                    (id, question_text, question_type, max_value, class, importance, options)
+                    VALUES (?, ?, ?, ?, ?, ?, ?)
                 `, [
                     question.id,
                     question.question_text,
                     question.question_type,
                     question.max_value,
                     question.class,
-                    question.KPI_type || null,
-                    question.kpi_poids || null,
-                    question.class_poids || null,
+                    importancePercent,
                     options
                 ]);
             }
@@ -563,7 +559,6 @@ app.post('/api/questions/update', async (req, res) => {
     }
 });
 
-// Delete question
 // Delete question endpoint
 app.delete('/api/questions/delete', async (req, res) => {
     let conn;
@@ -597,4 +592,3 @@ app.delete('/api/questions/delete', async (req, res) => {
         if (conn) conn.release();
     }
 });
-

@@ -9,6 +9,7 @@ export const useQuestions = () => {
   const loadQuestions = async () => {
     try {
       const fetchedQuestions = await fetchQuestions();
+      console.log('Questions récupérées:', fetchedQuestions);
       setQuestions(fetchedQuestions);
     } catch (error) {
       console.error('Error loading questions:', error);
@@ -16,6 +17,7 @@ export const useQuestions = () => {
       setLoading(false);
     }
   };
+  
 
   useEffect(() => {
     loadQuestions();
