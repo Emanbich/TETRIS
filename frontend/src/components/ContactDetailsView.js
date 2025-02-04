@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { ArrowLeft, User, Phone, Mail, Clock } from 'lucide-react';
+import { ArrowLeft, User, Phone, Mail, Clock, Download } from 'lucide-react';
+import * as XLSX from 'xlsx';
 
 const ContactDetailsView = ({ onBack }) => {
   const [contacts, setContacts] = useState([]);
@@ -22,6 +23,25 @@ const ContactDetailsView = ({ onBack }) => {
     fetchContacts();
   }, []);
 
+  const downloadExcel = () => {
+    const worksheet = XLSX.utils.json_to_sheet(contacts.map(contact => ({
+      'Nom': contact.name,
+      'Téléphone': contact.phone,
+      'Email': contact.email,
+      'Date': new Date(contact.created_at).toLocaleDateString('fr-FR', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      })
+    })));
+
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Contacts");
+    XLSX.writeFile(workbook, "contacts.xlsx");
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
@@ -33,22 +53,34 @@ const ContactDetailsView = ({ onBack }) => {
   return (
     <div className="min-h-screen bg-gray-50 p-8">
       <div className="max-w-7xl mx-auto">
-        <div className="mb-8">
-          <button
-            onClick={onBack}
-            className="flex items-center gap-2 text-tetris-blue hover:text-tetris-light transition-colors"
-          >
-            <ArrowLeft size={20} />
-            Retour aux statistiques
-          </button>
+        <div className="mb-8 flex justify-between items-center">
+          <div>
+            <button
+              onClick={onBack}
+              className="flex items-center gap-2 text-tetris-blue hover:text-tetris-light transition-colors"
+            >
+              <ArrowLeft size={20} />
+              Retour aux statistiques
+            </button>
 
-          <h1 className="text-3xl font-bold text-gray-900 mt-6">Contacts à Suivre</h1>
-          <p className="mt-2 text-gray-600">Liste des utilisateurs nécessitant une attention particulière</p>
+            <h1 className="text-3xl font-bold text-gray-900 mt-6">Contacts à Suivre</h1>
+            <p className="mt-2 text-gray-600">Liste des utilisateurs nécessitant une attention particulière</p>
+          </div>
+
+          {contacts.length > 0 && (
+            <button
+              onClick={downloadExcel}
+              className="flex items-center gap-2 px-4 py-2 bg-tetris-blue text-white rounded-lg hover:bg-tetris-light transition-colors"
+            >
+              <Download size={20} />
+              Télécharger Excel
+            </button>
+          )}
         </div>
 
         <div className="grid gap-6">
           {contacts.map((contact) => (
-            <div 
+            <div
               key={contact.id}
               className="bg-white rounded-xl shadow-lg border border-gray-100 p-6 transition-all duration-300 hover:shadow-xl"
             >
