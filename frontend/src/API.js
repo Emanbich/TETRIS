@@ -25,8 +25,12 @@ export const startSurvey = async () => {
   };
   
 
-export const submitResponses = async (surveyId, responses) => {
+
+export const submitResponses = async (surveyId, responses, negativeScore) => {
   try {
+    console.log('[submitResponses] Début, surveyId=', surveyId, ' negativeScore=', negativeScore);
+
+    // Transforme l'objet responses en tableau
     const formattedResponses = Object.entries(responses).map(([questionId, data]) => {
       const { answer, optionalAnswer } = data;
       return {
@@ -41,7 +45,12 @@ export const submitResponses = async (surveyId, responses) => {
       responses: formattedResponses
     };
 
-    console.log('Payload envoyé au backend :', payload);
+    // On inclut negativeScore seulement s'il est défini
+    if (typeof negativeScore !== 'undefined') {
+      payload.negativeScore = negativeScore;
+    }
+
+    console.log('[submitResponses] Payload envoyé au backend :', payload);
 
     const response = await fetch('http://localhost:5000/api/responses', {
       method: 'POST',
@@ -49,15 +58,28 @@ export const submitResponses = async (surveyId, responses) => {
       body: JSON.stringify(payload),
     });
 
+    console.log('[submitResponses] Réponse brute du backend :', response);
+
     if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
+      const errMsg = await response.text();
+      console.error('[submitResponses] HTTP error, status=', response.status, ' message=', errMsg);
+      return false;
     }
 
+    // Essayons de lire la réponse JSON ou texte
+    const serverResponse = await response.text();
+    console.log('[submitResponses] Réponse du serveur (texte) :', serverResponse);
+    // ou si vous attendez un JSON
+    // const serverData = await response.json();
+    // console.log('[submitResponses] Réponse du serveur (JSON) :', serverData);
+
+    console.log('[submitResponses] Fin, success=true');
     return true;
   } catch (error) {
-    console.error('Network error:', error);
+    console.error('[submitResponses] Erreur réseau ou fetch:', error);
     return false;
   }
 };
+
 
   

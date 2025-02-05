@@ -78,46 +78,62 @@ app.post('/api/start-survey', async (req, res) => {
     }
 });
 
-// ...
+// index.js (backend)
 app.post('/api/responses', async (req, res) => {
     try {
-        const { survey_id, responses } = req.body;
-
-        // Vérifie qu'on a bien un survey_id et un tableau "responses"
-        if (!survey_id || !responses || !Array.isArray(responses) || responses.length === 0) {
-            return res.status(400).send('Invalid data. Make sure to include survey_id and an array of responses.');
-        }
-
-        // Prépare la requête SQL
-        const query = `
-          INSERT INTO responses 
-            (survey_id, question_id, answer, optional_answer, responded_at) 
-          VALUES (?, ?, ?, ?, ?)
-        `;
-
-        // Pour chaque item dans le tableau responses
-        // item = { question_id, answer, optional_answer }
-        const currentDateTime = new Date();
-        for (const item of responses) {
-            const { question_id, answer, optional_answer } = item;
-            
-            // Exécute l'insertion
-            await executeQuery(query, [
-                Number(survey_id),
-                Number(question_id),
-                answer,
-                optional_answer,     // <-- On stocke ici la valeur optionnelle
-                currentDateTime,
-            ]);
-        }
-
-        res.status(200).send('Responses successfully recorded.');
+      console.log('[POST /api/responses] Body reçu:', req.body);
+      const { survey_id, responses, negativeScore } = req.body;
+  
+      // Log la valeur de negativeScore
+      console.log('[POST /api/responses] negativeScore reçu =', negativeScore);
+  
+      if (!survey_id || !responses) {
+        console.error('[POST /api/responses] Erreur: survey_id ou responses manquants');
+        return res.status(400).send('Invalid data. Must include survey_id and responses');
+      }
+  
+      // Mise à jour du score_negatif si on a un negativeScore
+      if (typeof negativeScore !== 'undefined') {
+        const nsValue = Number(negativeScore) || 0.0;
+        console.log(`[POST /api/responses] Mise à jour du score_negatif=${nsValue} pour survey_id=${survey_id}`);
+  
+        await executeQuery(
+          'UPDATE surveys SET score_negatif = ? WHERE id = ?',
+          [nsValue, Number(survey_id)]
+        );
+      } else {
+        console.log('[POST /api/responses] Pas de negativeScore dans le body, on n update pas la table surveys');
+      }
+  
+      // Insertion des réponses
+      const insertQuery = `
+        INSERT INTO responses
+        (survey_id, question_id, answer, optional_answer, responded_at)
+        VALUES (?, ?, ?, ?, ?)
+      `;
+      const currentDateTime = new Date();
+  
+      for (const item of responses) {
+        console.log('[POST /api/responses] Insertion réponse =>', item);
+        const { question_id, answer, optional_answer } = item;
+  
+        await executeQuery(insertQuery, [
+          Number(survey_id),
+          Number(question_id),
+          answer,
+          optional_answer || null,
+          currentDateTime
+        ]);
+      }
+  
+      console.log('[POST /api/responses] Insertion réussie, envoi 200...');
+      res.status(200).send('Responses successfully recorded.');
     } catch (err) {
-        console.error('Error inserting responses:', err);
-        res.status(500).send('Server error');
+      console.error('[POST /api/responses] Erreur:', err);
+      res.status(500).send('Server error');
     }
-});
-
+  });
+  
 // Error handling middleware
 app.use((err, req, res, next) => {
     console.error(err.stack);
@@ -214,10 +230,6 @@ app.get('/api/analytics/additional', async (req, res) => {
 });
 
 // Route to get all feedback responses
-// Add this route to your backend index.js or update if it exists
-// Update your /api/feedback/analysis endpoint in index.js
-// Update the /api/feedback/analysis endpoint in index.js
-
 app.get('/api/feedback/analysis', async (req, res) => {
     try {
         console.log('Fetching feedback analysis...'); 
@@ -425,8 +437,7 @@ app.get('/api/low-satisfaction', async (req, res) => {
     }
 });
 
-// Get all questions (adapté pour ne plus utiliser KPI_type, kpi_poids et class_poids)
-// L'importance est ici gérée en pourcentage (valeur entre 0 et 100, affichée avec 2 décimales)
+// Get all questions
 app.get('/api/questions', async (req, res) => {
     try {
         const questions = await executeQuery(`
@@ -442,7 +453,6 @@ app.get('/api/questions', async (req, res) => {
             ORDER BY id ASC
         `);
         
-
         // Format the response
         const formattedQuestions = questions.map(q => {
             let parsedOptions = null;
@@ -478,8 +488,7 @@ app.get('/api/questions', async (req, res) => {
     }
 });
 
-// Update or create questions (adapté pour ne plus utiliser KPI_type, kpi_poids et class_poids)
-// La valeur d'importance est attendue en pourcentage (0 à 100)
+// Update or create questions
 app.post('/api/questions/update', async (req, res) => {
     let conn;
     try {

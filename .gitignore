@@ -3,7 +3,7 @@
 /.pnp
 .pnp.js
 .vercel
-
+/node_modules
 # testing
 /coverage
 /backend/node_modules

@@ -1,6 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { ArrowLeft, Save, AlertCircle, Plus, Trash2 } from 'lucide-react';
-
+import { HelpCircle } from 'lucide-react';
+/** --------------------------------------------------------------------------------
+ * Composant CustomAlert pour afficher des messages d'alerte
+ * --------------------------------------------------------------------------------*/
 const CustomAlert = ({ children, variant = 'default', className = '' }) => {
   const baseStyles = "p-4 rounded-lg mb-4 flex items-center gap-2";
   const variantStyles = {
@@ -16,6 +19,9 @@ const CustomAlert = ({ children, variant = 'default', className = '' }) => {
   );
 };
 
+/** --------------------------------------------------------------------------------
+ * Composant OptionsEditor pour gérer les options d'une question "choice"
+ * --------------------------------------------------------------------------------*/
 const OptionsEditor = ({ options = [], onChange, onAdd, onRemove }) => {
   return (
     <div className="space-y-2">
@@ -50,6 +56,90 @@ const OptionsEditor = ({ options = [], onChange, onAdd, onRemove }) => {
   );
 };
 
+/** --------------------------------------------------------------------------------
+ * Composant ImportanceField pour gérer la valeur "importance" d'une question
+ * en permettant de REVENIR à l'ancienne valeur si la somme dépasse 100%.
+ * --------------------------------------------------------------------------------*/
+const ImportanceField = ({ question, index, questions, setQuestions }) => {
+  const [showTooltip, setShowTooltip] = useState(false);
+  const [tempImportance, setTempImportance] = useState(question.importance);
+
+  const handleBlur = () => {
+    // On convertit la valeur saisie en nombre (ou 0 si NaN)
+    const newValueNum = parseFloat(tempImportance) || 0;
+    // Ancienne valeur (pour pouvoir la rétablir si invalid)
+    const oldValueNum = parseFloat(question.importance) || 0;
+
+    // On duplique le tableau de questions
+    const updatedQuestions = [...questions];
+
+    // On met à jour l'importance de la question courante dans la copie
+    updatedQuestions[index] = {
+      ...updatedQuestions[index],
+      importance: newValueNum.toFixed(2), // formatage au centième
+    };
+
+    // On calcule la somme totale des importances après cette modification
+    const totalImportance = updatedQuestions.reduce(
+      (sum, q) => sum + parseFloat(q.importance || 0),
+      0
+    );
+
+    // ICI on vérifie la règle : la somme doit être (très proche de) 100
+    // Si la somme est invalide, on refuse la nouvelle valeur
+    if (totalImportance > 100.0 + 0.01) {
+      // On rétablit l'ancienne valeur dans le champ
+      setTempImportance(oldValueNum.toFixed(2));
+      alert("La somme des importances dépasse 100%. Valeur annulée.");
+      return;
+    }
+
+    // Sinon, on valide la nouvelle importance et on met à jour le state parent
+    setQuestions(updatedQuestions);
+  };
+
+  return (
+    <div>
+      <label className="block text-sm font-medium text-gray-700 mb-2">
+        <div className="flex items-center gap-2">
+          Importance (%)
+          <div 
+            className="relative"
+            onMouseEnter={() => setShowTooltip(true)}
+            onMouseLeave={() => setShowTooltip(false)}
+          >
+            <HelpCircle
+              size={16}
+              className="text-gray-400 cursor-pointer hover:text-gray-600"
+            />
+            {showTooltip && (
+              <div className="absolute z-10 bottom-full left-1/2 transform -translate-x-1/2 mb-2 
+                              bg-gray-800 text-white text-xs rounded py-1 px-2 
+                              whitespace-nowrap">
+                Sur un total de 100%, indiquez l'importance que vous accordez à cette question par rapport aux autres questions.
+              </div>
+            )}
+          </div>
+        </div>
+      </label>
+
+      <input
+        type="number"
+        step="0.01"
+        min="0"
+        max="100"
+        value={tempImportance}
+        onChange={(e) => setTempImportance(e.target.value)}
+        onBlur={handleBlur}
+        className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-tetris-blue focus:border-transparent"
+      />
+    </div>
+  );
+};
+
+/** --------------------------------------------------------------------------------
+ * Composant principal EditFormPage
+ * --------------------------------------------------------------------------------*/
 const EditFormPage = ({ onBack }) => {
   const [questions, setQuestions] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -60,6 +150,7 @@ const EditFormPage = ({ onBack }) => {
   const questionTypes = ['rating', 'stars', 'choice', 'text'];
   const classTypes = ['Satisfaction générale', 'Qualité du service', 'Processus et support'];
 
+  // Au montage, on va chercher les questions
   useEffect(() => {
     fetchQuestions();
   }, []);
@@ -75,7 +166,7 @@ const EditFormPage = ({ onBack }) => {
       const data = await response.json();
       console.log('Fetched questions:', data); // Debug
 
-      // Formatage des questions (on initialise l'importance à "0.00" si non défini)
+      // Formatage des questions
       const formattedData = data.map(q => ({
         ...q,
         importance: q.importance !== undefined ? Number(q.importance).toFixed(2) : "0.00",
@@ -93,6 +184,9 @@ const EditFormPage = ({ onBack }) => {
     }
   };
 
+  /** --------------------------------------------------------------------------------
+   * Handlers pour gérer les champs (sauf l'importance, géré par ImportanceField)
+   * --------------------------------------------------------------------------------*/
   const handleOptionsChange = (questionIndex, optionIndex, value) => {
     const updatedQuestions = [...questions];
     if (!updatedQuestions[questionIndex].options) {
@@ -128,6 +222,9 @@ const EditFormPage = ({ onBack }) => {
     setQuestions(updatedQuestions);
   };
 
+  /** --------------------------------------------------------------------------------
+   * Ajout / Suppression de question
+   * --------------------------------------------------------------------------------*/
   const addNewQuestion = () => {
     const maxId = Math.max(...questions.map(q => q.id), 0);
     const newQuestion = {
@@ -199,13 +296,19 @@ const EditFormPage = ({ onBack }) => {
     }
   };
 
+  /** --------------------------------------------------------------------------------
+   * handleSubmit : Envoi des questions en base
+   * --------------------------------------------------------------------------------*/
   const handleSubmit = async () => {
     // Vérification que la somme des importances est égale à 100%
     const totalImportance = questions.reduce(
       (sum, q) => sum + parseFloat(q.importance || 0),
       0
     );
+
+    // Contrôle final
     if (Math.abs(totalImportance - 100) > 0.01) {
+      setError("La somme des importances doit être égale à 100%.");
       return;
     }
 
@@ -244,6 +347,9 @@ const EditFormPage = ({ onBack }) => {
     }
   };
 
+  /** --------------------------------------------------------------------------------
+   * Affichage
+   * --------------------------------------------------------------------------------*/
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
@@ -340,6 +446,8 @@ const EditFormPage = ({ onBack }) => {
                           ))}
                         </select>
                       </div>
+
+                      {/* Si question_type = "choice", on affiche OptionsEditor */}
                       {question.question_type === 'choice' && (
                         <OptionsEditor
                           options={question.options || []}
@@ -348,6 +456,8 @@ const EditFormPage = ({ onBack }) => {
                           onRemove={(idx) => handleRemoveOption(index, idx)}
                         />
                       )}
+
+                      {/* Si question_type = "rating" ou "stars", on propose max_value */}
                       {(question.question_type === 'rating' || question.question_type === 'stars') && (
                         <div>
                           <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -362,6 +472,7 @@ const EditFormPage = ({ onBack }) => {
                         </div>
                       )}
 
+                      {/* On affiche "Classe" seulement si question_type != "text" */}
                       {question.question_type !== 'text' && (
                         <>
                           <div>
@@ -381,30 +492,20 @@ const EditFormPage = ({ onBack }) => {
                         </>
                       )}
 
-                      {/* Champ Importance en pourcentage */}
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">
-                          Importance (%)
-                        </label>
-                        <input
-                          type="number"
-                          step="0.01"
-                          min="0"
-                          max="100"
-                          value={question.importance || ''}
-                          onChange={(e) => handleQuestionChange(index, 'importance', e.target.value)}
-                          onBlur={(e) => {
-                            let value = parseFloat(e.target.value);
-                            if (isNaN(value)) value = 0;
-                            handleQuestionChange(index, 'importance', value.toFixed(2));
-                          }}
-                          className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-tetris-blue focus:border-transparent"
+                      {/* Champ Importance -> on utilise maintenant le composant dédié */}
+                      {question.question_type && (
+                        <ImportanceField
+                          question={question}
+                          index={index}
+                          questions={questions}
+                          setQuestions={setQuestions}
                         />
-                      </div>
+                      )}
                     </div>
                   </div>
                 </div>
                 
+                {/* Bouton pour supprimer la question */}
                 <button
                   onClick={() => deleteQuestion(index)}
                   className="p-2 text-red-500 hover:bg-red-50 rounded-lg transition-colors"

@@ -168,3 +168,6 @@ ALTER TABLE questions
   DROP COLUMN KPI_type,
   DROP COLUMN kpi_poids,
   DROP COLUMN class_poids;
+
+ALTER TABLE surveys
+ADD COLUMN score_negatif FLOAT DEFAULT NULL;
