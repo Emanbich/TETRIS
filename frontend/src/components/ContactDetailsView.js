@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { ArrowLeft, User, Phone, Mail, Clock, Download } from 'lucide-react';
-const XLSX = require('xlsx');
 import API_BASE_URL from "../config";
+const XLSX = require('xlsx');
 const ContactDetailsView = ({ onBack }) => {
   const [contacts, setContacts] = useState([]);
   const [loading, setLoading] = useState(true);
