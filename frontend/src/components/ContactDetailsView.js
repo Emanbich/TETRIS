@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { ArrowLeft, User, Phone, Mail, Clock, Download } from 'lucide-react';
 import * as XLSX from 'xlsx';
-
+import API_BASE_URL from "../config";
 const ContactDetailsView = ({ onBack }) => {
   const [contacts, setContacts] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -9,7 +9,7 @@ const ContactDetailsView = ({ onBack }) => {
   useEffect(() => {
     const fetchContacts = async () => {
       try {
-        const response = await fetch('http://localhost:5000/api/low-satisfaction');
+        const response = await fetch(`${API_BASE_URL}/api/low-satisfaction`);
         if (!response.ok) throw new Error('Failed to fetch contacts');
         const data = await response.json();
         setContacts(data);

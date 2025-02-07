@@ -1,4 +1,4 @@
-// src/components/constants/questions.js
+import API_BASE_URL from "../config";
 
 // These are the fixed options for choice type questions
 const choiceOptions = {
@@ -24,7 +24,7 @@ const transformDatabaseQuestion = (dbQuestion) => ({
 // Function to fetch and format questions
 export const fetchQuestions = async () => {
   try {
-    const response = await fetch('http://localhost:5000/api/questions');
+    const response = await fetch(`${API_BASE_URL}/api/questions`);
     if (!response.ok) throw new Error('Failed to fetch questions');
     const data = await response.json();
     return data.map(transformDatabaseQuestion);

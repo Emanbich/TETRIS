@@ -8,7 +8,7 @@ import { ArrowLeft, TrendingUp, Clock, MessageSquare, CreditCard, Info,User } fr
 
 const COLORS = ['#0B3D91', '#1E90FF', '#4169E1', '#6495ED', '#87CEEB'];
 const RADIAN = Math.PI / 180;
-
+import API_BASE_URL from "../config";
 const CustomLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, percent }) => {
     const radius = innerRadius + (outerRadius - innerRadius) * 0.5;
     const x = cx + radius * Math.cos(-midAngle * RADIAN);
@@ -57,7 +57,7 @@ const AdditionalAnalytics = ({ onBack, onShowFeedback, onShowContacts }) => {
     useEffect(() => {
         const fetchData = async () => {
             try {
-                const response = await fetch('http://localhost:5000/api/analytics/additional');
+                const response = await fetch(`${API_BASE_URL}/api/analytics/additional`);
                 if (!response.ok) throw new Error('Failed to fetch data');
                 
                 const surveyData = await response.json();

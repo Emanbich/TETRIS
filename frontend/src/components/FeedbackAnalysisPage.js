@@ -15,7 +15,7 @@ import {
     Heart,
     AlertTriangle
 } from 'lucide-react';
-
+import API_BASE_URL from "../config";
 const EmotionBadge = ({ emotion, score }) => {
     const configs = {
         SATISFACTION: { icon: ThumbsUp, color: 'bg-green-100 text-green-800' },
@@ -216,7 +216,7 @@ const FeedbackAnalysisPage = ({ onBack }) => {
     useEffect(() => {
         const fetchFeedback = async () => {
             try {
-                const response = await fetch('http://localhost:5000/api/feedback/analysis');
+                const response = await fetch(`${API_BASE_URL}/api/feedback/analysis`);
                 if (!response.ok) throw new Error('Failed to fetch feedback');
                 const data = await response.json();
                 setFeedbackData(data);

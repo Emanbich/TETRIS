@@ -1,5 +1,5 @@
 import fetch from 'node-fetch';
-
+import API_BASE_URL from "../config";
 // Constructive feedback suggestions in the insurance context
 const feedbackSuggestions = [
     "Excellent service ! Peut-être ajouter des notifications par SMS pour le suivi des dossiers ?",
@@ -101,7 +101,7 @@ const simulateSurveyResponses = async (count) => {
 
     for (let i = 0; i < count; i++) {
         try {
-            const surveyResponse = await fetch('http://localhost:5000/api/start-survey', {
+            const surveyResponse = await fetch(`${API_BASE_URL}/api/start-survey`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
@@ -119,7 +119,7 @@ const simulateSurveyResponses = async (count) => {
             const responses = generateSurveyResponse();
             
             // Format the request payload according to the backend's expectation
-            const submitResponse = await fetch('http://localhost:5000/api/responses', {
+            const submitResponse = await fetch(`${API_BASE_URL}/api/responses`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({

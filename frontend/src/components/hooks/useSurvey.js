@@ -4,6 +4,7 @@ import { startSurvey, submitResponses } from '../../API'; // <-- Assurez-vous qu
 import { analyzeFeedback } from '../../services/nlpService';
 import { SURVEY_CONFIG } from './../constants/config';
 import { useQuestions } from './useQuestions';
+import API_BASE_URL from "../config";
 
 export const useSurvey = () => {
   const [surveyId, setSurveyId] = useState(null);
@@ -216,7 +217,7 @@ export const useSurvey = () => {
             console.log('[handleSubmit] NLP analysis result:', analysis);
 
             console.log('[handleSubmit] Envoi de l analyse sur /api/feedback/analyze...');
-            const analysisResponse = await fetch('http://localhost:5000/api/feedback/analyze', {
+            const analysisResponse = await fetch(`${API_BASE_URL}/api/feedback/analyze`, {
               method: 'POST',
               headers: {
                 'Content-Type': 'application/json'
@@ -268,7 +269,7 @@ export const useSurvey = () => {
   const handleContactSubmit = async (contactData) => {
     console.log('[handleContactSubmit] contactData=', contactData);
     try {
-      const response = await fetch('http://localhost:5000/api/low-satisfaction', {
+      const response = await fetch(`${API_BASE_URL}/api/low-satisfaction`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'

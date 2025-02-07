@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { ArrowLeft, MessageSquare, Filter, Search, Star } from 'lucide-react';
-
+import API_BASE_URL from "../config";
 const CommentsAnalysis = ({ onBack }) => {
   const [comments, setComments] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -23,7 +23,7 @@ const CommentsAnalysis = ({ onBack }) => {
   useEffect(() => {
     const fetchComments = async () => {
       try {
-        const response = await fetch('http://localhost:5000/api/comments');
+        const response = await fetch(`${API_BASE_URL}/api/comments`);
         if (!response.ok) throw new Error('Failed to fetch comments');
         const data = await response.json();
         

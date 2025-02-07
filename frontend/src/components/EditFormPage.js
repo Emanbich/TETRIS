@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { ArrowLeft, Save, AlertCircle, Plus, Trash2 } from 'lucide-react';
 import { HelpCircle } from 'lucide-react';
+import API_BASE_URL from "../config";
 /** --------------------------------------------------------------------------------
  * Composant CustomAlert pour afficher des messages d'alerte
  * --------------------------------------------------------------------------------*/
@@ -157,7 +158,7 @@ const EditFormPage = ({ onBack }) => {
 
   const fetchQuestions = async () => {
     try {
-      const response = await fetch('http://localhost:5000/api/questions');
+      const response = await fetch(`${API_BASE_URL}/api/questions`);
       if (!response.ok) {
         const errorData = await response.json();
         throw new Error(errorData.details || 'Failed to fetch questions');
@@ -253,7 +254,7 @@ const EditFormPage = ({ onBack }) => {
 
       const questionToDelete = questions[index];
 
-      const response = await fetch('http://localhost:5000/api/questions/delete', {
+      const response = await fetch(`${API_BASE_URL}/api/questions/delete`, {
         method: 'DELETE',
         headers: {
           'Content-Type': 'application/json',
@@ -279,7 +280,7 @@ const EditFormPage = ({ onBack }) => {
       setTimeout(() => setSuccessMessage(''), 3000);
 
       // Mise à jour dans la base de données
-      const updateResponse = await fetch('http://localhost:5000/api/questions/update', {
+      const updateResponse = await fetch(`${API_BASE_URL}/api/questions/update`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -325,7 +326,7 @@ const EditFormPage = ({ onBack }) => {
 
       console.log('Submitting questions:', formattedQuestions);
 
-      const response = await fetch('http://localhost:5000/api/questions/update', {
+      const response = await fetch(`${API_BASE_URL}/api/questions/update`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

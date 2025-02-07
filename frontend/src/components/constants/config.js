@@ -1,7 +1,7 @@
 export const SURVEY_CONFIG = {
     ANIMATION_DURATION: 300,
     API_ENDPOINTS: {
-      BASE_URL: 'http://localhost:5000',
+      BASE_URL: '${API_BASE_URL}',
       SURVEY: '/api/start-survey',
       RESPONSES: '/api/responses',
       FEEDBACK: '/api/feedback/analyze',

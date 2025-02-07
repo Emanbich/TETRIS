@@ -7,7 +7,7 @@ import {
 import { 
     ArrowLeft, ThumbsUp, Star, Zap, Target,ArrowRight,MessageSquare,Edit
 } from 'lucide-react';
-
+import API_BASE_URL from "../config";
 const COLORS = ['#0B3D91', '#1E90FF', '#4169E1', '#6495ED', '#87CEEB'];
 const RADIAN = Math.PI / 180;
 
@@ -58,7 +58,7 @@ const SatisfactionAnalytics = ({ onBack, onShowAdditional, onShowComments,onShow
     useEffect(() => {
         const fetchData = async () => {
             try {
-                const response = await fetch('http://localhost:5000/api/analytics/responses');
+                const response = await fetch(`${API_BASE_URL}/api/analytics/responses`);
                 if (!response.ok) throw new Error('Failed to fetch data');
                 
                 const surveyData = await response.json();
