@@ -5,10 +5,10 @@ import {
     Cell,
 } from 'recharts';
 import { ArrowLeft, TrendingUp, Clock, MessageSquare, CreditCard, Info,User } from 'lucide-react';
+import API_BASE_URL from "../config";
 
 const COLORS = ['#0B3D91', '#1E90FF', '#4169E1', '#6495ED', '#87CEEB'];
 const RADIAN = Math.PI / 180;
-import API_BASE_URL from "../config";
 const CustomLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, percent }) => {
     const radius = innerRadius + (outerRadius - innerRadius) * 0.5;
     const x = cx + radius * Math.cos(-midAngle * RADIAN);
