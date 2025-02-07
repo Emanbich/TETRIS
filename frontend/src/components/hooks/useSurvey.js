@@ -4,7 +4,7 @@ import { startSurvey, submitResponses } from '../../API'; // <-- Assurez-vous qu
 import { analyzeFeedback } from '../../services/nlpService';
 import { SURVEY_CONFIG } from './../constants/config';
 import { useQuestions } from './useQuestions';
-import API_BASE_URL from "../config";
+import API_BASE_URL from '../../config';
 
 export const useSurvey = () => {
   const [surveyId, setSurveyId] = useState(null);

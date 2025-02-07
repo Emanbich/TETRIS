@@ -1,4 +1,4 @@
-import API_BASE_URL from ".../config";
+import API_BASE_URL from '../../config';
 
 // These are the fixed options for choice type questions
 const choiceOptions = {

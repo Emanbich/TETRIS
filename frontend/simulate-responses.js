@@ -1,5 +1,5 @@
 import fetch from 'node-fetch';
-import API_BASE_URL from "../config";
+import API_BASE_URL from "./src/config";
 // Constructive feedback suggestions in the insurance context
 const feedbackSuggestions = [
     "Excellent service ! Peut-être ajouter des notifications par SMS pour le suivi des dossiers ?",
