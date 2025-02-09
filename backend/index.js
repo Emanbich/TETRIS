@@ -12,7 +12,8 @@ const PORT = process.env.PORT || 5000;
 app.use(cors({
     origin: 'https://tetris-satisfaction-clients.vercel.app',
     methods: "GET,POST,PUT,DELETE",
-    credentials: true, 
+    allowedHeaders: ['Content-Type'],
+    credentials: false
   }));
   
 app.use(bodyParser.json());
