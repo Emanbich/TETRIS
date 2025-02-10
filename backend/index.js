@@ -2,10 +2,12 @@ const express = require('express');
 const bodyParser = require('body-parser');
 const sql = require("mssql");
 const cors = require('cors');
+const path = require("path");
+
+require('dotenv').config(); // Only needed for local development
 
 const app = express();
 const PORT = process.env.PORT || 5000;
-
 
 
 // Middleware
@@ -14,16 +16,16 @@ app.use(cors({
     methods: "GET,POST,PUT,DELETE",
     allowedHeaders: ['Content-Type'],
     credentials: false
-  }));
+}));
   
 app.use(bodyParser.json());
 
-require('dotenv').config(); // Only needed for local development
+
 
 const config = {
     user: process.env.DB_USER,
     password: process.env.DB_PASSWORD,
-    server: process.env.DB_HOST, 
+    server: process.env.DB_SERVER, 
     database: process.env.DB_NAME,
     port: parseInt(process.env.DB_PORT) || 1433, 
     options: {
@@ -36,50 +38,29 @@ sql.connect(config)
     .then(() => console.log("Connected to Azure SQL Database"))
     .catch(err => console.error("Database connection failed: ", err));
 
-
-
-app.listen(PORT, () => {
+app.listen(PORT, '0.0.0.0', () => {
     console.log(`Server running on port ${PORT}`);
-});
+    });
 
-// Création de la table low_satisfaction_responses (inchangé)
-const createLowSatisfactionTable = async () => {
-    const query = `
-      CREATE TABLE IF NOT EXISTS low_satisfaction_responses (
-        id INT AUTO_INCREMENT PRIMARY KEY,
-        survey_id INT NOT NULL,
-        name VARCHAR(255) NOT NULL,
-        phone VARCHAR(20) NOT NULL,
-        email VARCHAR(255) NOT NULL,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY (survey_id) REFERENCES surveys(id)
-      )
-    `;
-    
-    try {
-      await executeQuery(query);
-      console.log('Low satisfaction responses table created or already exists');
-    } catch (err) {
-      console.error('Error creating low satisfaction table:', err);
-    }
-};
-
-createLowSatisfactionTable();
 
 async function executeQuery(query, params = []) {
     let conn;
     try {
-        conn = await pool.getConnection();
+        conn = await sql.connect(config);
         const result = await conn.query(query, params);
         return result;
     } catch (err) {
         console.error('Database error:', err);
         throw err;
     } finally {
-        if (conn) conn.release();
+        if (conn) conn.close();
     }
 }
 
+// Serve the HTML file
+app.get("/", (req, res) => {
+    res.sendFile(path.join(__dirname, "views", "index.html"));
+});
 // Route to start the survey
 app.post('/api/start-survey', async (req, res) => {
     try {
@@ -153,8 +134,8 @@ app.post('/api/responses', async (req, res) => {
       console.error('[POST /api/responses] Erreur:', err);
       res.status(500).send('Server error');
     }
-  });
-  
+});
+
 // Error handling middleware
 app.use((err, req, res, next) => {
     console.error(err.stack);
@@ -164,10 +145,10 @@ app.use((err, req, res, next) => {
 app.listen(PORT, () => {
     console.log(`Server started on port ${PORT}`);
     console.log('Attempting to connect to SQL...');
-    pool.getConnection()
+    sql.connect(config)
         .then(conn => {
             console.log('Successfully connected to SQL!');
-            conn.release();
+            conn.close();
         })
         .catch(err => {
             console.error('Error connecting to SQL:', err);
