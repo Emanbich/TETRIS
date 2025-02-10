@@ -30,7 +30,7 @@ yarn-error.log*
 *.swo
 
 # local env files
-.env
+
 
 # Build artifacts
 *.map
