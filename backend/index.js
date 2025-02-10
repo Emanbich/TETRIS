@@ -1,6 +1,6 @@
 const express = require('express');
 const bodyParser = require('body-parser');
-const mariadb = require('mariadb');
+const sql = require("mssql");
 const cors = require('cors');
 
 const app = express();
@@ -20,15 +20,21 @@ app.use(bodyParser.json());
 
 require('dotenv').config(); // Only needed for local development
 
-const pool = mariadb.createPool({
-    host: process.env.DB_HOST, 
-    port: process.env.DB_PORT, 
-    user: process.env.DB_USER, 
-    password: process.env.DB_PASSWORD, 
-    database: process.env.DB_NAME, 
-    connectionLimit: 5, 
-    bigIntAsNumber: true
-});
+const config = {
+    user: process.env.DB_USER,
+    password: process.env.DB_PASSWORD,
+    server: process.env.DB_HOST, 
+    database: process.env.DB_NAME,
+    port: parseInt(process.env.DB_PORT) || 1433, 
+    options: {
+        encrypt: true, // Required for Azure SQL
+        trustServerCertificate: true // Change based on your Azure settings
+    }
+};
+
+sql.connect(config)
+    .then(() => console.log("Connected to Azure SQL Database"))
+    .catch(err => console.error("Database connection failed: ", err));
 
 
 
@@ -157,14 +163,14 @@ app.use((err, req, res, next) => {
 
 app.listen(PORT, () => {
     console.log(`Server started on port ${PORT}`);
-    console.log('Attempting to connect to MariaDB...');
+    console.log('Attempting to connect to SQL...');
     pool.getConnection()
         .then(conn => {
-            console.log('Successfully connected to MariaDB!');
+            console.log('Successfully connected to SQL!');
             conn.release();
         })
         .catch(err => {
-            console.error('Error connecting to MariaDB:', err);
+            console.error('Error connecting to SQL:', err);
         });
 });
 
